@@ -3,13 +3,11 @@ const searchInput = document.getElementById('search');
 const modal = document.getElementById('modal');
 const modalDetails = document.getElementById('modal-details');
 const closeModal = document.getElementById('close-modal');
-const prevBtn = document.getElementById('prev');
-const nextBtn = document.getElementById('next');
-const pageInfo = document.getElementById('page-info');
 
 const maxCount = 1025;
-const pageSize = 50;
-let currentPage = 1;
+const batchSize = 50;
+let loadedCount = 0;
+let isLoading = false;
 let allPokemon = [];
 
 function capitalize(s) {
@@ -21,37 +19,35 @@ async function fetchPokemonData(id) {
   return res.json();
 }
 
-async function loadPage(page) {
-  pokedex.innerHTML = '';
-  pageInfo.textContent = `Page ${page}`;
-  const start = (page - 1) * pageSize + 1;
-  const end = Math.min(start + pageSize - 1, maxCount);
-  const promises = [];
+async function loadNextBatch() {
+  if (isLoading || loadedCount >= maxCount) return;
+  isLoading = true;
 
-  for (let i = start; i <= end; i++) {
+  const promises = [];
+  for (let i = loadedCount + 1; i <= Math.min(loadedCount + batchSize, maxCount); i++) {
     promises.push(fetchPokemonData(i));
   }
 
-  const pokemonList = await Promise.all(promises);
-  allPokemon = pokemonList;
-  pokemonList.forEach(pokemon => {
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `
-      <img src="${pokemon.sprites.front_default}" alt="${pokemon.name}" />
-      <p>${capitalize(pokemon.name)}</p>
-    `;
-    card.addEventListener('click', () => showModal(pokemon));
-    pokedex.appendChild(card);
-  });
+  const newPokemon = await Promise.all(promises);
+  allPokemon = [...allPokemon, ...newPokemon];
+  newPokemon.forEach(pokemon => showCard(pokemon));
+  loadedCount += newPokemon.length;
+  isLoading = false;
+}
 
-  prevBtn.disabled = page === 1;
-  nextBtn.disabled = end === maxCount;
+function showCard(pokemon) {
+  const card = document.createElement('div');
+  card.className = 'card';
+  card.innerHTML = `
+    <img src="${pokemon.sprites.front_default}" alt="${pokemon.name}" />
+    <p>${capitalize(pokemon.name)}</p>
+  `;
+  card.addEventListener('click', () => showModal(pokemon));
+  pokedex.appendChild(card);
 }
 
 async function showModal(pokemon) {
   modal.classList.remove('hidden');
-
   const moves = pokemon.moves.map(m => m.move.name).slice(0, 10).join(', ');
   const speciesRes = await fetch(pokemon.species.url);
   const speciesData = await speciesRes.json();
@@ -75,38 +71,19 @@ async function showModal(pokemon) {
 
 searchInput.addEventListener('input', (e) => {
   const value = e.target.value.toLowerCase();
-  const filtered = allPokemon.filter(p => p.name.includes(value));
   pokedex.innerHTML = '';
+  const filtered = allPokemon.filter(p => p.name.includes(value));
   filtered.forEach(showCard);
 });
-
-function showCard(pokemon) {
-  const card = document.createElement('div');
-  card.className = 'card';
-  card.innerHTML = `
-    <img src="${pokemon.sprites.front_default}" alt="${pokemon.name}" />
-    <p>${capitalize(pokemon.name)}</p>
-  `;
-  card.addEventListener('click', () => showModal(pokemon));
-  pokedex.appendChild(card);
-}
 
 closeModal.addEventListener('click', () => {
   modal.classList.add('hidden');
 });
 
-prevBtn.addEventListener('click', () => {
-  if (currentPage > 1) {
-    currentPage--;
-    loadPage(currentPage);
+window.addEventListener('scroll', () => {
+  if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 300) {
+    loadNextBatch();
   }
 });
 
-nextBtn.addEventListener('click', () => {
-  if (currentPage * pageSize < maxCount) {
-    currentPage++;
-    loadPage(currentPage);
-  }
-});
-
-loadPage(currentPage);
+loadNextBatch();
