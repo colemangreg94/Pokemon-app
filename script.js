@@ -1,3 +1,10 @@
+let allNames = [];
+
+async function preloadNames() {
+  const res = await fetch(`https://pokeapi.co/api/v2/pokemon?limit=1025`);
+  const data = await res.json();
+  allNames = data.results; // [{ name, url }]
+}
 const pokedex = document.getElementById('pokedex');
 const searchInput = document.getElementById('search');
 const modal = document.getElementById('modal');
@@ -69,11 +76,24 @@ async function showModal(pokemon) {
   `;
 }
 
-searchInput.addEventListener('input', (e) => {
+searchInput.addEventListener('input', async (e) => {
   const value = e.target.value.toLowerCase();
   pokedex.innerHTML = '';
-  const filtered = allPokemon.filter(p => p.name.includes(value));
-  filtered.forEach(showCard);
+
+  if (!value) {
+    allPokemon.forEach(showCard); // Show loaded Pokémon
+    return;
+  }
+
+  const matches = allNames.filter(p => p.name.includes(value)).slice(0, 20); // Limit for performance
+  const fetches = matches.map(async p => {
+    const id = p.url.split('/').filter(Boolean).pop();
+    const pokemon = await fetchPokemonData(id);
+    return pokemon;
+  });
+
+  const results = await Promise.all(fetches);
+  results.forEach(showCard);
 });
 
 closeModal.addEventListener('click', () => {
@@ -86,4 +106,4 @@ window.addEventListener('scroll', () => {
   }
 });
 
-loadNextBatch();
+preloadNames();
