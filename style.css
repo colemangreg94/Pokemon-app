@@ -9,7 +9,9 @@ body {
 h1 {
   text-align: center;
 }
-
+h2 { 
+  text-align: center;
+}
 input[type="text"] {
   display: block;
   margin: 1em auto;
