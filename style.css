@@ -12,6 +12,15 @@ h1 {
 h2 { 
   text-align: center;
 }
+canvas {
+  width: 200px;
+  height: 200px;
+  display: block;
+  margin: 0 auto;
+  background: rgba(152,54,54,0.1);
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(202, 81, 81, 0.1);
+}
 input[type="text"] {
   display: block;
   margin: 1em auto;
@@ -80,8 +89,17 @@ button {
   width: 90%;
   max-width: 600px;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
-
+#modal-details img {
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+}
 .close-button {
   position: absolute;
   top: 0.5em;
